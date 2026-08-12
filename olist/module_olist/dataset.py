@@ -1,29 +1,34 @@
 from pathlib import Path
-
-from loguru import logger
-from tqdm import tqdm
-import typer
-
-from module_olist.config import PROCESSED_DATA_DIR, RAW_DATA_DIR
-
-app = typer.Typer()
+import shutil
+import kagglehub
 
 
-@app.command()
-def main(
-    # ---- REPLACE DEFAULT PATHS AS APPROPRIATE ----
-    input_path: Path = RAW_DATA_DIR / "dataset.csv",
-    output_path: Path = PROCESSED_DATA_DIR / "dataset.csv",
-    # ----------------------------------------------
-):
-    # ---- REPLACE THIS WITH YOUR OWN CODE ----
-    logger.info("Processing dataset...")
-    for i in tqdm(range(10), total=10):
-        if i == 5:
-            logger.info("Something happened for iteration 5.")
-    logger.success("Processing dataset complete.")
-    # -----------------------------------------
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+RAW_DATA_DIR = PROJECT_ROOT / "data" / "raw"
+
+
+def download_dataset():
+    RAW_DATA_DIR.mkdir(parents=True, exist_ok=True)
+
+    path = kagglehub.dataset_download(
+        "olistbr/brazilian-ecommerce",
+        output_dir=str(RAW_DATA_DIR)
+    )
+
+    downloaded_path = Path(path)
+
+    archive_dir = RAW_DATA_DIR / "archive"
+
+    if archive_dir.exists():
+        for file in archive_dir.iterdir():
+            shutil.move(str(file), RAW_DATA_DIR / file.name)
+
+        archive_dir.rmdir()
+
+    print(f"Dataset disponível em: {RAW_DATA_DIR}")
+
+    return RAW_DATA_DIR
 
 
 if __name__ == "__main__":
-    app()
+    download_dataset()
