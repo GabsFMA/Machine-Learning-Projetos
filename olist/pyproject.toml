@@ -19,6 +19,7 @@ dependencies = [
     "fg-data-profiling[notebook]>=4.19.1",
     "ipython",
     "jupyterlab",
+    "kagglehub>=1.0.2",
     "loguru",
     "matplotlib",
     "mkdocs",
