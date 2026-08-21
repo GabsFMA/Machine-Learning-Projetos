@@ -1,143 +1,243 @@
-import pandas as pd
 from pathlib import Path
+
+import pandas as pd
 from loguru import logger
 
-def load_data(orders_path: Path, items_path: Path, customers_path: Path) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+
+def load_data(
+    orders_path: Path,
+    items_path: Path,
+    customers_path: Path,
+) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     """
     Carrega os dados de pedidos, itens e clientes a partir de arquivos CSV.
 
     Args:
-        orders_path (Path): Caminho para o arquivo CSV de pedidos.
-        items_path (Path): Caminho para o arquivo CSV de itens.
-        customers_path (Path): Caminho para o arquivo CSV de clientes.
+        orders_path: Caminho para o arquivo CSV de pedidos.
+        items_path: Caminho para o arquivo CSV de itens.
+        customers_path: Caminho para o arquivo CSV de clientes.
 
     Returns:
-        Orders: DataFrame contendo os dados de pedidos.
-        Items: DataFrame contendo os dados de itens.
-        Customers: DataFrame contendo os dados de clientes.
+        Tupla contendo:
+        - DataFrame de pedidos;
+        - DataFrame de itens;
+        - DataFrame de clientes.
     """
 
     orders = pd.read_csv(
         orders_path,
-        parse_dates=["order_purchase_timestamp",
-                     "order_approved_at",
-                     "order_delivered_carrier_date",
-                     "order_delivered_customer_date",
-                     "order_estimated_delivery_date"],
-
+        parse_dates=[
+            "order_purchase_timestamp",
+            "order_approved_at",
+            "order_delivered_carrier_date",
+            "order_delivered_customer_date",
+            "order_estimated_delivery_date",
+        ],
     )
 
     items = pd.read_csv(items_path)
+
     customers = pd.read_csv(customers_path)
 
     return orders, items, customers
 
-def save_dataset(dataset: pd.DataFrame, output_path: Path) -> None:
-    dataset.to_csv(output_path, index=False)
-    logger.success(f"Dataset salvo na pasta: {output_path}")
 
 def create_target(orders: pd.DataFrame) -> pd.DataFrame:
-    # Seleciona apenas os pedidos que podem ser utilizados para construir
-    # o histórico de entregas atrasadas e realizadas dentro do prazo.
+    """
+    Seleciona pedidos adequados para o problema de previsão de atraso
+    e cria a variável-alvo `is_late`.
+
+    A variável assume:
+        0 -> pedido entregue no prazo ou antes;
+        1 -> pedido entregue depois da data estimada.
+
+    Args:
+        orders: DataFrame contendo os pedidos.
+
+    Returns:
+        DataFrame contendo somente os pedidos utilizados na análise,
+        incluindo a variável-alvo `is_late`.
+    """
+
+    # ---------------------------------------------------------
+    # Seleção dos pedidos que podem compor o histórico
+    # ---------------------------------------------------------
     delivered_orders = orders.loc[
-        # Mantém somente pedidos que foram efetivamente entregues.
+        # Mantém somente pedidos efetivamente entregues.
         orders["order_status"].eq("delivered")
 
-        # Remove pedidos sem a data real em que o cliente recebeu a     compra.
-        # Essa data é necessária para saber se o pedido atrasou.
+        # A data real de entrega é necessária para determinar
+        # se o pedido atrasou.
         & orders["order_delivered_customer_date"].notna()
 
-        # Remove pedidos sem a data de entrega prometida ao cliente.
-        # Sem essa informação, não é possível comparar o previsto com o     realizado.
+        # A data estimada é necessária para comparar
+        # o prazo previsto com a entrega real.
         & orders["order_estimated_delivery_date"].notna()
 
-        # Mantém somente pedidos com a data de aprovação do pagamento.
-        # Esse é o momento definido para realizar a previsão.
+        # A aprovação representa o momento no qual será
+        # realizada a previsão.
         & orders["order_approved_at"].notna()
-    ].copy()  # Cria uma cópia independente para evitar alterações no   DataFrame original.
+    ].copy()
 
-
-    # Cria a variável-alvo do problema:
-    # 1 → pedido entregue depois da data prometida;
-    # 0 → pedido entregue dentro do prazo ou antes da data prometida.
+    # ---------------------------------------------------------
+    # Criação da variável-alvo
+    # ---------------------------------------------------------
     delivered_orders["is_late"] = (
         delivered_orders["order_delivered_customer_date"]
         > delivered_orders["order_estimated_delivery_date"]
-    ).astype("int8")  # Armazena 0 e 1 usando um tipo inteiro que ocupa     menos memória.
+    ).astype("int8")
 
-
-    # Apresenta a quantidade total de pedidos antes da aplicação dos    filtros.
+    # ---------------------------------------------------------
+    # Logs para acompanhamento do processamento
+    # ---------------------------------------------------------
     logger.info(f"Pedidos originais: {len(orders):,}")
 
+    logger.info(
+        f"Pedidos no recorte histórico: {len(delivered_orders):,}"
+    )
 
-    # Apresenta quantos pedidos permaneceram no recorte histórico.
-    logger.info(f"Pedidos no recorte histórico: {len(delivered_orders):,}")
-
-
-    # Mostra a quantidade de pedidos em cada classe:
-    # 0 = entregue no prazo;
-    # 1 = entregue com atraso.
-    logger.info(delivered_orders["is_late"].value_counts(dropna=False))
+    logger.info(
+        "Distribuição da variável-alvo:\n"
+        f"{delivered_orders['is_late'].value_counts(dropna=False)}"
+    )
 
     return delivered_orders
 
+
 def aggregate_items(items: pd.DataFrame) -> pd.DataFrame:
-    # A tabela de itens possui uma linha para cada item presente no pedido.
-    # Portanto, um mesmo order_id pode aparecer várias vezes.
-    # Como o objetivo é construir uma base com uma linha por pedido,
-    # precisamos agrupar os itens antes de integrar essa tabela às  demais.
+    """
+    Agrega a tabela de itens para alterar sua granularidade de
+    uma linha por item para uma linha por pedido.
+
+    Args:
+        items: DataFrame contendo os itens dos pedidos.
+
+    Returns:
+        DataFrame agregado por `order_id`.
+    """
+
     items_agg = (
         items.groupby(
-            "order_id",       # Agrupa todos os itens pertencentes ao   mesmo pedido.
-            as_index=False,   # Mantém order_id como uma coluna comum.
+            "order_id",
+            as_index=False,
         )
         .agg(
-            # Conta quantas linhas de itens existem em cada pedido.
-            # Um pedido com três produtos registrados terá item_count   igual a 3.
+            # Quantidade de itens existentes no pedido.
             item_count=("order_item_id", "count"),
 
-            # Conta quantos vendedores diferentes participam do pedido.
-            # O nunique evita contar o mesmo vendedor mais de uma vez.
+            # Quantidade de vendedores distintos envolvidos.
             seller_count=("seller_id", "nunique"),
 
-            # Soma os preços dos itens para obter o valor total dos     produtos
-            # presentes no pedido.
+            # Valor total dos produtos.
             total_price=("price", "sum"),
 
-            # Soma o frete de todos os itens para obter o valor total   de frete
-            # associado ao pedido.
+            # Valor total de frete.
             total_freight=("freight_value", "sum"),
         )
     )
 
+    # Após a agregação, cada pedido deve aparecer apenas uma vez.
+    assert items_agg["order_id"].is_unique, (
+        "order_id não é único após a agregação dos itens."
+    )
 
-    # Verifica se cada pedido aparece somente uma vez após a agregação.
-    #
-    # Se a condição for falsa, o Python interromperá a execução e   lançará
-    # um AssertionError. Essa checagem ajuda a garantir que a unidade de
-    # análise da nova tabela é realmente o pedido.
-    assert items_agg["order_id"].is_unique
+    logger.info(
+        f"Pedidos após agregação dos itens: {len(items_agg):,}"
+    )
 
-
-    # Exibe as cinco primeiras linhas da tabela agregada.
     return items_agg
 
-def create_dataset(orders, items, customers):
-    orders = create_target(orders)
-    items_aggs = aggregate_items(items)
 
+def create_dataset(
+    orders: pd.DataFrame,
+    items: pd.DataFrame,
+    customers: pd.DataFrame,
+) -> pd.DataFrame:
+    """
+    Constrói o dataset intermediário consolidando pedidos,
+    informações agregadas dos itens e localização dos clientes.
+
+    Args:
+        orders: DataFrame de pedidos.
+        items: DataFrame de itens.
+        customers: DataFrame de clientes.
+
+    Returns:
+        Dataset consolidado com uma linha por pedido.
+    """
+
+    # ---------------------------------------------------------
+    # Criação da variável-alvo e seleção do histórico
+    # ---------------------------------------------------------
+    orders = create_target(orders)
+
+    # ---------------------------------------------------------
+    # Agregação dos itens para uma linha por pedido
+    # ---------------------------------------------------------
+    items_agg = aggregate_items(items)
+
+    # ---------------------------------------------------------
+    # Junção entre pedidos e informações dos itens
+    # ---------------------------------------------------------
     data = orders.merge(
-        items_aggs,
+        items_agg,
         on="order_id",
         how="left",
         validate="one_to_one",
     )
 
+    # ---------------------------------------------------------
+    # Junção com informações geográficas dos clientes
+    # ---------------------------------------------------------
     data = data.merge(
-        customers[["customer_id", "customer_city", "customer_state"]],
+        customers[
+            [
+                "customer_id",
+                "customer_city",
+                "customer_state",
+            ]
+        ],
         on="customer_id",
         how="left",
-        validate="may_to_one",
+        validate="many_to_one",
+    )
+
+    # Mantém a garantia de uma linha por pedido.
+    assert data["order_id"].is_unique, (
+        "order_id deixou de ser único após as junções."
+    )
+
+    logger.info(
+        f"Dataset consolidado: {data.shape[0]:,} linhas "
+        f"x {data.shape[1]} colunas"
     )
 
     return data
+
+
+def save_dataset(
+    dataset: pd.DataFrame,
+    output_path: Path,
+) -> None:
+    """
+    Salva o dataset em formato CSV.
+
+    Args:
+        dataset: DataFrame que será salvo.
+        output_path: Caminho de destino do arquivo.
+    """
+
+    # Garante que a pasta de destino exista.
+    output_path.parent.mkdir(
+        parents=True,
+        exist_ok=True,
+    )
+
+    dataset.to_csv(
+        output_path,
+        index=False,
+    )
+
+    logger.success(
+        f"Dataset salvo em: {output_path}"
+    )
