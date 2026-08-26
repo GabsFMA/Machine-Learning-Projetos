@@ -49,4 +49,44 @@ def create_gradient_boosting_pipeline() -> Pipeline:
                     ("model", model)
         ]
     )
+
+def create_xgboost_pipeline() -> Pipeline:
+    """
+    Cria o pipeline de pré-processamento  e treinamento do modelo
+    """
+    preprocessor = create_preprocessor()
+
+    model = XGBClassifier(
+        n_estimators=100, #número de árvores na floresta
+        learning_rate=0.1, #Taxa de aprendizado
+        max_depth=3, 
+        random_state=42, 
+
+    )
+
+    return Pipeline(
+        steps = [   ("preprocessor", preprocessor), 
+                    ("model", model)
+        ]
+    )
+
+def create_lightgbm_pipeline() -> Pipeline:
+    """
+    Cria o pipeline de pré-processamento  e treinamento do modelo
+    """
+    preprocessor = create_preprocessor()
+
+    model = LGBMClassifier(
+        n_estimators=100, #número de árvores na floresta
+        learning_rate=0.1, #Taxa de aprendizado
+        max_depth=3, 
+        random_state=42, 
+
+    )
+
+    return Pipeline(
+        steps = [   ("preprocessor", preprocessor), 
+                    ("model", model)
+        ]
+    )
     
