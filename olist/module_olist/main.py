@@ -81,7 +81,19 @@ def main(
     )
 
     # ---------------------------------------------------------
-    # 3. Salvamento em data/interim
+    # 3. Engenharia de features
+    # ---------------------------------------------------------
+
+    logger.info(
+        "Criando features..."
+    )
+
+    dataset = create_features(
+        dataset
+    )
+
+    # ---------------------------------------------------------
+    # 4. Salvamento em data/interim
     # ---------------------------------------------------------
     logger.info(
         "Salvando dataset intermediário..."
