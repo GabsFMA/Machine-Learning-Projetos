@@ -12,6 +12,7 @@ from module_olist.dataset import (
     save_dataset,
 )
 
+from module_olist.features import create_features
 
 def main(
     orders_path: Path = (
@@ -24,8 +25,8 @@ def main(
         RAW_DATA_DIR / "olist_customers_dataset.csv"
     ),
     output_path: Path = (
-        INTERIM_DATA_DIR / "dataset.csv"
-    ),
+        INTERIM_DATA_DIR / "orders_dataset_refined.csv"
+)
 ) -> None:
     """
     Executa o pipeline de construção do dataset intermediário.
@@ -80,7 +81,19 @@ def main(
     )
 
     # ---------------------------------------------------------
-    # 3. Salvamento em data/interim
+    # 3. Engenharia de features
+    # ---------------------------------------------------------
+
+    logger.info(
+        "Criando features..."
+    )
+
+    dataset = create_features(
+        dataset
+    )
+
+    # ---------------------------------------------------------
+    # 4. Salvamento em data/interim
     # ---------------------------------------------------------
     logger.info(
         "Salvando dataset intermediário..."

@@ -6,7 +6,7 @@ from xgboost import XGBClassifier  #Bom com dado tabular
 from lightgbm import LGBMClassifier 
 
 NUMERIC_FEATURES = [
-    "promise_days", 
+    "promised_days", 
     "item_count", 
     "seller_count", 
     "total_price", 
@@ -15,9 +15,9 @@ NUMERIC_FEATURES = [
 
 CATEGORICAL_FEATURES = [
     "purchase_month",
-    "purshace_weekday",
+    "purchase_weekday",
     "purchase_hour",
-    "costumer_state"
+    "customer_state"
 ]
 
 def create_preprocessor() -> ColumnTransformer:

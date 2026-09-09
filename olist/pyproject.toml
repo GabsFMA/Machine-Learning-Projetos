@@ -20,6 +20,7 @@ dependencies = [
     "ipython",
     "jupyterlab",
     "kagglehub>=1.0.2",
+    "lightgbm>=4.7.0",
     "loguru",
     "matplotlib",
     "mkdocs",
@@ -37,6 +38,7 @@ dependencies = [
     "shap>=0.52.0",
     "tqdm",
     "typer",
+    "xgboost>=3.4.1",
 ]
 requires-python = "==3.12.1"
 
