@@ -1,29 +1,17 @@
-from pathlib import Path
-
-from loguru import logger
-from tqdm import tqdm
-import typer
-
-from image_classifier.config import FIGURES_DIR, PROCESSED_DATA_DIR
-
-app = typer.Typer()
+import matplotlib.pyplot as plt
 
 
-@app.command()
-def main(
-    # ---- REPLACE DEFAULT PATHS AS APPROPRIATE ----
-    input_path: Path = PROCESSED_DATA_DIR / "dataset.csv",
-    output_path: Path = FIGURES_DIR / "plot.png",
-    # -----------------------------------------
-):
-    # ---- REPLACE THIS WITH YOUR OWN CODE ----
-    logger.info("Generating plot from data...")
-    for i in tqdm(range(10), total=10):
-        if i == 5:
-            logger.info("Something happened for iteration 5.")
-    logger.success("Plot generation complete.")
-    # -----------------------------------------
+def plot_sample_images(images, labels, class_names, num_images=9):
+    """Plota exemplos de imagens de um conjunto de dados."""
 
+    plt.figure(figsize=(10, 10))
 
-if __name__ == "__main__":
-    app()
+    for i in range(num_images):
+        plt.subplot(3, 3, i + 1)
+        plt.imshow(images[i])
+        plt.title(class_names[labels[i]])
+        plt.axis("off")
+
+    plt.suptitle("Exemplos da base CIFAR-10")
+    plt.tight_layout()
+    plt.show()
