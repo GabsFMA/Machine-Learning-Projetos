@@ -1,30 +1,23 @@
-from pathlib import Path
-
-from loguru import logger
-from tqdm import tqdm
-import typer
-
-from image_classifier.config import MODELS_DIR, PROCESSED_DATA_DIR
-
-app = typer.Typer()
+from image_classifier.modeling.model import create_model
 
 
-@app.command()
-def main(
-    # ---- REPLACE DEFAULT PATHS AS APPROPRIATE ----
-    features_path: Path = PROCESSED_DATA_DIR / "features.csv",
-    labels_path: Path = PROCESSED_DATA_DIR / "labels.csv",
-    model_path: Path = MODELS_DIR / "model.pkl",
-    # -----------------------------------------
+def train_model(
+    x_train,
+    y_train,
+    epochs=10,
+    batch_size=64,
+    validation_split=0.2,
 ):
-    # ---- REPLACE THIS WITH YOUR OWN CODE ----
-    logger.info("Training some model...")
-    for i in tqdm(range(10), total=10):
-        if i == 5:
-            logger.info("Something happened for iteration 5.")
-    logger.success("Modeling training complete.")
-    # -----------------------------------------
+    """Cria e treina a CNN."""
 
+    model = create_model()
 
-if __name__ == "__main__":
-    app()
+    history = model.fit(
+        x_train,
+        y_train,
+        epochs=epochs,
+        batch_size=batch_size,
+        validation_split=validation_split,
+    )
+
+    return model, history
