@@ -1,29 +1,50 @@
 from pathlib import Path
 
-from loguru import logger
-from tqdm import tqdm
-import typer
-
-from face_recognition.config import PROCESSED_DATA_DIR, RAW_DATA_DIR
-
-app = typer.Typer()
+from face_recognition.config import AUTHORIZED_DIR, TEST_DIR
 
 
-@app.command()
-def main(
-    # ---- REPLACE DEFAULT PATHS AS APPROPRIATE ----
-    input_path: Path = RAW_DATA_DIR / "dataset.csv",
-    output_path: Path = PROCESSED_DATA_DIR / "dataset.csv",
-    # ----------------------------------------------
-):
-    # ---- REPLACE THIS WITH YOUR OWN CODE ----
-    logger.info("Processing dataset...")
-    for i in tqdm(range(10), total=10):
-        if i == 5:
-            logger.info("Something happened for iteration 5.")
-    logger.success("Processing dataset complete.")
-    # -----------------------------------------
+IMAGE_EXTENSIONS = {
+    ".jpg",
+    ".jpeg",
+    ".png",
+    ".bmp",
+}
 
 
-if __name__ == "__main__":
-    app()
+def get_authorized_images():
+    """Retorna as imagens cadastradas para cada pessoa autorizada."""
+
+    authorized_images = {}
+
+    if not AUTHORIZED_DIR.exists():
+        return authorized_images
+
+    for person_dir in AUTHORIZED_DIR.iterdir():
+        if not person_dir.is_dir():
+            continue
+
+        images = [
+            image_path
+            for image_path in person_dir.iterdir()
+            if image_path.is_file()
+            and image_path.suffix.lower() in IMAGE_EXTENSIONS
+        ]
+
+        if images:
+            authorized_images[person_dir.name] = sorted(images)
+
+    return authorized_images
+
+
+def get_test_images():
+    """Retorna as imagens disponíveis para teste."""
+
+    if not TEST_DIR.exists():
+        return []
+
+    return sorted(
+        image_path
+        for image_path in TEST_DIR.iterdir()
+        if image_path.is_file()
+        and image_path.suffix.lower() in IMAGE_EXTENSIONS
+    )
