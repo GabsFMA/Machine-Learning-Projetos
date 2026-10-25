@@ -1,72 +1,93 @@
-# Deep Learning com TensorFlow
+# Classificador de imagens CIFAR-10
 
-Projeto didático para estudar redes neurais artificiais e classificação binária com TensorFlow. O conteúdo atual está concentrado em dois notebooks: um apresenta a propagação direta de uma rede e o outro demonstra treinamento e avaliação com dados sintéticos.
+Projeto de classificação de imagens com uma rede neural convolucional (CNN) implementada em TensorFlow/Keras. O modelo reconhece as dez categorias da base CIFAR-10: avião, automóvel, pássaro, gato, cervo, cachorro, sapo, cavalo, navio e caminhão.
 
-> Este projeto ainda não implementa um pipeline de ponta a ponta com dados reais. Os módulos Python são estruturas iniciais do template Cookiecutter Data Science, e não há datasets nem modelos treinados armazenados na pasta.
+## Requisitos
 
-## Conteúdo
+- Python 3.10
+- `uv`
+- Acesso à internet na primeira execução para baixar a CIFAR-10, caso ela ainda não esteja no cache do Keras
 
-### `notebooks/atividade_tensorflow_rede_neural_atraso_entrega.ipynb`
-
-Atividade introdutória sobre uma rede neural para estimar atraso de entrega. Utiliza exemplos pequenos com três características (`distancia`, `quantidade_itens` e `frete`) e aborda:
-
-- representação das entradas e do alvo como arrays;
-- cálculo de um neurônio por meio de pesos, bias e soma ponderada;
-- ativações ReLU e sigmoid;
-- arquitetura MLP `3 → 4 → 1` e contagem de parâmetros;
-- *forward pass* e interpretação da saída como probabilidade;
-- threshold para converter probabilidade em classe;
-- Binary Cross-Entropy como função de perda.
-
-O objetivo deste notebook é entender como a rede produz uma previsão e calcula a perda. Os parâmetros não são treinados neste exercício.
-
-### `notebooks/rede_neural_tensorflow_backpropagation.ipynb`
-
-Demonstra um fluxo de treinamento de uma MLP para classificação binária usando dados sintéticos gerados com `make_classification`. O notebook divide os dados em treino e teste, padroniza as features, treina o modelo com `model.fit()`, acompanha a loss de treino e validação e apresenta métricas e matriz de confusão.
-
-O treinamento e o cálculo dos gradientes são realizados pelo TensorFlow; o notebook não implementa o algoritmo de backpropagation manualmente. Os dados utilizados também não são dados reais de entregas da Olist.
-
-## Estrutura
-
-```text
-deep_learning/
-├── data/
-│   ├── external/
-│   ├── interim/
-│   ├── processed/
-│   └── raw/
-├── deep_learning/
-│   ├── config.py
-│   ├── dataset.py
-│   ├── features.py
-│   ├── plots.py
-│   └── modeling/
-│       ├── predict.py
-│       └── train.py
-├── docs/                    # Esqueleto de documentação MkDocs
-├── models/                  # Ainda sem modelos treinados
-├── notebooks/               # Atividades didáticas
-├── reports/
-├── tests/
-├── Makefile
-├── pyproject.toml
-└── uv.lock
-```
-
-Os módulos em `deep_learning/` ainda contêm código de exemplo do template. Eles não implementam o pré-processamento, a engenharia de características, o treinamento ou a inferência descritos nos notebooks.
-
-## Ambiente
-
-O projeto declara Python `~=3.10.0` e utiliza `uv` para gerenciar as dependências. Para sincronizar o ambiente:
+Instale e sincronize as dependências na pasta `image_classifier`:
 
 ```powershell
 uv sync
 ```
 
-Para iniciar o JupyterLab:
+## Uso
+
+Baixe/carregue a base e confira as dimensões:
 
 ```powershell
-uv run jupyter lab
+uv run python -m image_classifier.dataset
 ```
 
-Abra um dos notebooks em `notebooks/` e execute suas células no ambiente do projeto. A versão do TensorFlow registrada no `uv.lock` é 2.21.0; a saída salva no notebook introdutório indica uma execução anterior com TensorFlow 2.20.0.
+Treine a CNN, avalie-a no conjunto de teste e salve o modelo:
+
+```powershell
+uv run python -m image_classifier.main train
+```
+
+O comando usa por padrão 10 épocas, batch size 64 e 20% dos dados de treino para validação. O modelo é salvo em `models/cifar10_cnn.keras`. Os parâmetros podem ser ajustados:
+
+```powershell
+uv run python -m image_classifier.main train --epochs 20 --batch-size 128 --validation-split 0.15
+```
+
+Classifique uma imagem do conjunto de teste usando o modelo salvo:
+
+```powershell
+uv run python -m image_classifier.main predict-sample --index 0
+```
+
+Para treinar ou carregar um modelo em outro caminho, use `--model-path` nos comandos `train` e `predict-sample`.
+
+## Arquitetura e fluxo
+
+As imagens RGB têm dimensão `32 × 32 × 3` e são normalizadas para o intervalo `[0, 1]`. Os rótulos inteiros são mantidos no formato esperado por `sparse_categorical_crossentropy`.
+
+A CNN contém três blocos convolucionais com 16, 32 e 64 filtros, cada um seguido de *max pooling*. As features resultantes passam por uma camada densa de 64 neurônios e uma saída `softmax` de dez classes. O treinamento usa o otimizador Adam e acompanha acurácia e loss.
+
+O fluxo executável está em `image_classifier/main.py`:
+
+1. carrega a CIFAR-10 pelo Keras;
+2. treina o modelo com uma parcela de validação;
+3. avalia loss e acurácia no conjunto de teste;
+4. salva o modelo no formato Keras `.keras`;
+5. permite classificar uma amostra do conjunto de teste com o modelo salvo.
+
+## Testes e lint
+
+Execute os testes:
+
+```powershell
+uv run python -m pytest tests
+```
+
+Verifique o estilo:
+
+```powershell
+uv run ruff check
+uv run ruff format --check
+```
+
+## Estrutura
+
+```text
+image_classifier/
+├── data/                    # Diretórios de dados (CIFAR-10 é gerenciada pelo cache Keras)
+├── docs/                    # Documentação MkDocs
+├── image_classifier/
+│   ├── dataset.py            # Carregamento e normalização da CIFAR-10
+│   ├── main.py               # Comandos de treino e inferência
+│   ├── plots.py              # Visualização de imagens e histórico
+│   └── modeling/
+│       ├── model.py          # Arquitetura e compilação da CNN
+│       ├── train.py          # Treinamento
+│       └── predict.py        # Avaliação, persistência e predições
+├── models/                   # Modelo treinado (gerado pelo comando train)
+├── tests/                    # Testes automatizados
+├── Makefile
+├── pyproject.toml
+└── uv.lock
+```
