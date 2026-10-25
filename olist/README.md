@@ -1,196 +1,105 @@
-# Atividade 01 — Cookiecutter Data Science (CCDS)
+# Olist — previsão de atraso de entregas
 
-Esta atividade teve como objetivo conhecer e explorar o **Cookiecutter Data Science (CCDS)**, uma ferramenta utilizada para criar estruturas padronizadas para projetos de Ciência de Dados e Machine Learning.
+Projeto de Ciência de Dados com o conjunto público de e-commerce da Olist. O objetivo é estimar, **no momento da aprovação do pagamento**, o risco de um pedido ser entregue depois da data prometida.
 
-Durante a atividade, foi criado um projeto utilizando o CCDS para observar, na prática, como a ferramenta organiza automaticamente diretórios, arquivos de configuração, código-fonte, dados, notebooks, modelos e documentação.
+O notebook de análise exploratória registra 96.456 pedidos entregues com as datas necessárias para definir o resultado. Nesse recorte, 7.826 pedidos (8,11%) foram entregues com atraso e 88.630 (91,89%) dentro do prazo ou antes. Como as classes são desbalanceadas, acurácia isolada não é suficiente para avaliar os modelos.
 
-## Objetivo da atividade
+## Dados
 
-O principal objetivo foi compreender a importância de uma estrutura organizada e reproduzível no desenvolvimento de projetos de Machine Learning.
+Os arquivos originais ficam em `data/raw/`:
 
-A atividade permitiu observar como o CCDS separa diferentes responsabilidades do projeto, como:
+| Arquivo | Registros | Conteúdo |
+| --- | ---: | --- |
+| `olist_orders_dataset.csv` | 99.441 | Pedidos, status e datas |
+| `olist_order_items_dataset.csv` | 112.650 | Itens, vendedores, preços e frete |
+| `olist_customers_dataset.csv` | 99.441 | Identificação e localização dos clientes |
+| `olist_geolocation_dataset.csv` | 1.000.163 | Coordenadas e localização por CEP |
+| `olist_order_payments_dataset.csv` | 103.886 | Forma, parcelas e valor dos pagamentos |
+| `olist_order_reviews_dataset.csv` | 99.224 | Notas e comentários das avaliações |
+| `olist_products_dataset.csv` | 32.951 | Categorias e atributos dos produtos |
+| `olist_sellers_dataset.csv` | 3.095 | Identificação e localização dos vendedores |
+| `product_category_name_translation.csv` | 71 | Tradução dos nomes de categorias |
 
-- armazenamento dos dados;
-- processamento dos dados;
-- desenvolvimento de notebooks;
-- treinamento e armazenamento de modelos;
-- geração de relatórios;
-- criação de código-fonte reutilizável;
-- gerenciamento de dependências;
-- testes e documentação.
+O pipeline atual utiliza pedidos, itens e clientes. As demais tabelas estão disponíveis para análises e extensões futuras.
 
-## Criação do projeto
+O arquivo `data/interim/dataset.csv` contém a base consolidada usada nas análises: 96.456 linhas, uma por pedido, e 15 colunas. A pasta `data/interim/` também recebe a saída do pipeline descrito abaixo.
 
-O projeto foi inicializado utilizando o CCDS e recebeu o nome:
+## Preparação dos dados
 
-```text
-olist
-```
+O módulo `module_olist/main.py` carrega pedidos, itens e clientes e:
 
-Como exemplo de contexto para o projeto, foi utilizada a descrição:
+1. mantém pedidos com status `delivered` e datas de aprovação, entrega real e entrega estimada preenchidas;
+2. cria o alvo `is_late`, que vale `1` quando a entrega real ocorre depois da data estimada, e `0` caso contrário;
+3. agrega os itens por pedido, calculando quantidade de itens e vendedores, preço total e frete total;
+4. junta essas informações aos dados do cliente, preservando uma linha por pedido;
+5. cria as features `promised_days`, `purchase_month`, `purchase_weekday` e `purchase_hour`.
 
-```text
-Brazilian ecommerce public dataset
-```
+As datas de envio e entrega real são usadas para construir o histórico e o alvo; não fazem parte das features utilizadas na previsão. A análise exploratória também verifica essa separação para reduzir o risco de *data leakage*.
 
-A partir das opções selecionadas durante a criação, o CCDS gerou automaticamente a estrutura inicial do projeto.
+Por padrão, o resultado é salvo em `data/interim/orders_dataset_refined.csv`.
 
-## Gerenciamento do ambiente
+## Modelagem
 
-O projeto utiliza um ambiente virtual próprio:
+Os pipelines em `module_olist/modeling/` comparam Gradient Boosting, XGBoost e LightGBM. O pré-processamento mantém as features numéricas e aplica *one-hot encoding* às categóricas. A validação cruzada estratificada usa cinco folds e compara métricas como precisão, *recall*, F1, ROC-AUC e PR-AUC; o threshold de classificação é escolhido para maximizar o F1 das previsões *out-of-fold*.
 
-```text
-.venv
-```
+O artefato atualmente armazenado em `models/` é um pipeline LightGBM (`best_model.joblib`) com threshold `0.14`, registrado em `models/metadata.json`. O módulo `module_olist/modeling/inference.py` demonstra inferência em uma amostra de cinco pedidos.
 
-As dependências são gerenciadas utilizando o `uv`.
+## Configuração e execução
 
-Para sincronizar o ambiente do projeto:
+O projeto requer Python **3.12.1** e usa `uv` para gerenciar o ambiente e as dependências:
 
-```bash
+```powershell
 uv sync
 ```
 
-Para ativar manualmente o ambiente virtual:
+Para gerar a base refinada a partir dos CSVs originais:
 
-```bash
-source .venv/bin/activate
+```powershell
+uv run python -m module_olist.main
 ```
 
-Durante a atividade também foi adicionada a biblioteca `seaborn`:
+Para executar a demonstração de inferência, primeiro gere `data/interim/orders_dataset_refined.csv`:
 
-```bash
-uv add seaborn
+```powershell
+uv run python -m module_olist.modeling.inference
 ```
 
-## Estrutura gerada pelo CCDS
+## Notebooks e relatórios
 
-A organização gerada segue aproximadamente a seguinte estrutura:
+- [`notebooks/02_EDA_template.ipynb`](notebooks/02_EDA_template.ipynb): análise do alvo, construção da base por pedido e exploração de prazos, complexidade do pedido, localização e sazonalidade.
+- [`notebooks/orders_data_quality.ipynb`](notebooks/orders_data_quality.ipynb): validação da tabela de pedidos com um contrato Pandera para completude, unicidade, validade e consistência temporal.
+- [`notebooks/orders_eda.ipynb`](notebooks/orders_eda.ipynb): geração do relatório de perfil dos pedidos.
+- `reports/reports.html`: relatório HTML de perfil da tabela de pedidos.
+
+## Estrutura do projeto
 
 ```text
 olist/
 ├── data/
-│   ├── external/
-│   ├── interim/
-│   ├── processed/
-│   └── raw/
-│
-├── docs/
-├── models/
-├── notebooks/
-├── references/
-├── reports/
-│
+│   ├── raw/                 # CSVs originais
+│   └── interim/             # Bases intermediárias e refinadas
+├── docs/                    # Documentação MkDocs
+├── models/                  # Modelo treinado e metadados
+├── notebooks/               # EDA e qualidade dos dados
+├── reports/                 # Relatório HTML e figuras
 ├── module_olist/
-│   ├── __init__.py
-│   ├── config.py
-│   ├── dataset.py
-│   ├── features.py
-│   ├── modeling/
-│   │   ├── __init__.py
-│   │   ├── predict.py
-│   │   └── train.py
-│   └── plots.py
-│
-├── tests/
-├── .gitignore
-├── Makefile
-├── pyproject.toml
-└── README.md
+│   ├── config.py            # Caminhos e configuração
+│   ├── dataset.py           # Leitura, target, agregação e junções
+│   ├── features.py          # Engenharia de features
+│   ├── main.py              # Pipeline de preparação dos dados
+│   └── modeling/            # Pipelines, validação e inferência
+├── tests/                   # Testes automatizados
+├── Makefile                 # Comandos auxiliares
+├── pyproject.toml           # Dependências e configuração
+└── uv.lock                 # Versões resolvidas das dependências
 ```
 
-## Principais diretórios
+## Testes
 
-### `data/`
+Para executar os testes:
 
-Responsável pelo armazenamento dos conjuntos de dados utilizados no projeto.
-
-O CCDS divide os dados de acordo com o estágio de processamento:
-
-- `raw/`: dados originais, sem modificações;
-- `external/`: dados provenientes de fontes externas;
-- `interim/`: dados intermediários durante transformações;
-- `processed/`: dados já preparados para utilização nos modelos.
-
-Essa separação ajuda a manter os dados originais preservados e torna o pipeline de transformação mais fácil de acompanhar.
-
-### `notebooks/`
-
-Destinado aos notebooks utilizados durante exploração de dados, testes, experimentos e desenvolvimento inicial das soluções.
-
-### `models/`
-
-Utilizado para armazenar modelos treinados, previsões ou outros artefatos relacionados aos modelos de Machine Learning.
-
-### `reports/`
-
-Destinado aos resultados produzidos durante as análises, como relatórios, gráficos e figuras.
-
-### `references/`
-
-Armazena materiais auxiliares utilizados no projeto, como documentação, dicionários de dados e referências externas.
-
-### `module_olist/`
-
-Contém o código-fonte principal do projeto.
-
-A separação do código em módulos permite evitar que toda a lógica fique concentrada em notebooks e facilita sua reutilização.
-
-Alguns dos arquivos gerados incluem:
-
-- `dataset.py`: código relacionado à obtenção e preparação dos dados;
-- `features.py`: criação e transformação de características;
-- `plots.py`: funções relacionadas à geração de visualizações;
-- `modeling/train.py`: código relacionado ao treinamento dos modelos;
-- `modeling/predict.py`: código relacionado à utilização dos modelos treinados.
-
-### `tests/`
-
-Destinado aos testes automatizados do projeto.
-
-### `pyproject.toml`
-
-Arquivo responsável pelas configurações do projeto e pelo gerenciamento de suas dependências.
-
-### `Makefile`
-
-Permite definir comandos que automatizam tarefas recorrentes do projeto.
-
-## Por que utilizar uma estrutura como essa?
-
-Projetos de Machine Learning podem crescer rapidamente e envolver diferentes etapas, como:
-
-```text
-dados
-  ↓
-tratamento
-  ↓
-análise exploratória
-  ↓
-criação de features
-  ↓
-treinamento
-  ↓
-avaliação
-  ↓
-modelo
-  ↓
-relatórios
+```powershell
+uv run python -m pytest tests
 ```
 
-Sem uma organização definida, notebooks, datasets, modelos e scripts podem acabar misturados.
-
-O CCDS busca resolver esse problema oferecendo uma estrutura inicial padronizada, facilitando:
-
-- organização;
-- manutenção;
-- colaboração;
-- reprodutibilidade;
-- separação de responsabilidades;
-- evolução do projeto.
-
-## Conclusão
-
-A atividade permitiu conhecer o funcionamento do **Cookiecutter Data Science** e compreender como uma estrutura padronizada pode auxiliar na organização de projetos de Machine Learning.
-
-Mais do que apenas criar pastas automaticamente, o CCDS propõe uma forma de separar as diferentes etapas de um projeto de Ciência de Dados, tornando seu desenvolvimento mais organizado e reproduzível.
+Atualmente, `tests/test_data.py` contém apenas um teste de exemplo com `assert False`; portanto, a suíte ainda não representa uma validação funcional do projeto e falha até que esse placeholder seja substituído.
