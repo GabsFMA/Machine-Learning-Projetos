@@ -1,12 +1,13 @@
-Generating the docs
-----------
+# Documentação
 
-Use [mkdocs](http://www.mkdocs.org/) structure to update the documentation. 
+Esta documentação usa MkDocs. A partir desta pasta, execute:
 
-Build locally with:
+```powershell
+uv run mkdocs serve
+```
 
-    mkdocs build
+Para gerar os arquivos estáticos:
 
-Serve locally with:
-
-    mkdocs serve
+```powershell
+uv run mkdocs build
+```

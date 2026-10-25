@@ -22,28 +22,27 @@ requirements:
 ## Delete all compiled Python files
 .PHONY: clean
 clean:
-	find . -type f -name "*.py[co]" -delete
-	find . -type d -name "__pycache__" -delete
+	$(PYTHON_INTERPRETER) -c "from pathlib import Path; import shutil; roots=(Path('face_recognition'), Path('tests')); [path.unlink() for root in roots for pattern in ('*.pyc', '*.pyo') for path in root.rglob(pattern)]; [shutil.rmtree(path) for root in roots for path in root.rglob('__pycache__') if path.is_dir()]"
 
 
 ## Lint using ruff (use `make format` to do formatting)
 .PHONY: lint
 lint:
-	ruff format --check
-	ruff check
+	uv run ruff format --check
+	uv run ruff check
 
 ## Format source code with ruff
 .PHONY: format
 format:
-	ruff check --fix
-	ruff format
+	uv run ruff check --fix
+	uv run ruff format
 
 
 
 ## Run tests
 .PHONY: test
 test:
-	python -m pytest tests
+	uv run python -m pytest tests
 
 
 ## Set up Python interpreter environment
@@ -62,10 +61,22 @@ create_environment:
 #################################################################################
 
 
-## Make dataset
+## Inspect local gallery and query images
 .PHONY: data
-data: requirements
-	$(PYTHON_INTERPRETER) face_recognition/dataset.py
+data:
+	uv run python -m face_recognition.dataset
+
+
+## Recognize one image using the local gallery
+.PHONY: recognize
+recognize:
+	uv run python -m face_recognition.main recognize --image "$(IMAGE)"
+
+
+## Recognize all images in data/test and save a CSV report
+.PHONY: recognize-test-set
+recognize-test-set:
+	uv run python -m face_recognition.main recognize-test-set
 
 
 #################################################################################

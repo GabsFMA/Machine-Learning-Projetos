@@ -1,5 +1,6 @@
 # Data
 /data/
+/reports/recognition_results.csv
 
 # Mac OS-specific storage files
 .DS_Store

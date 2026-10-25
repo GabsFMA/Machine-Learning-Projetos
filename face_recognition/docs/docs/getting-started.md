@@ -1,6 +1,27 @@
-Getting started
-===============
+# Primeiros passos
 
-This is where you describe how to get set up on a clean install, including the
-commands necessary to get the raw data (using the `sync_data_from_s3` command,
-for example), and then how to make the cleaned, final data sets.
+Instale Python 3.10 e `uv`, depois sincronize as dependências na pasta do projeto:
+
+```powershell
+uv sync
+```
+
+Organize imagens consentidas em `data/authorized/<identidade>/` e imagens para consulta diretamente em `data/test/`. Confira os arquivos encontrados:
+
+```powershell
+uv run python -m face_recognition.dataset
+```
+
+Compare uma imagem com a galeria:
+
+```powershell
+uv run python -m face_recognition.main recognize --image data/test/consulta.jpg
+```
+
+Processe o diretório de teste e salve um relatório CSV:
+
+```powershell
+uv run python -m face_recognition.main recognize-test-set
+```
+
+Na primeira execução, o DeepFace pode baixar os pesos do modelo escolhido. Consulte o README para opções, estrutura dos dados e limitações de uso.

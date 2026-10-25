@@ -1,10 +1,5 @@
-# face_recognition documentation!
+# Reconhecimento facial local
 
-## Description
+Aplicação demonstrativa que compara imagens de consulta com uma galeria local organizada por identidade, usando DeepFace e o modelo Facenet por padrão.
 
-A short description of the project.
-
-## Commands
-
-The Makefile contains the central entry points for common tasks related to this project.
-
+O projeto não treina um modelo próprio nem salva embeddings. O README na raiz do projeto descreve como preparar imagens, executar os comandos e entender as limitações e cuidados de uso.
