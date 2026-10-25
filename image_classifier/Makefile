@@ -22,28 +22,27 @@ requirements:
 ## Delete all compiled Python files
 .PHONY: clean
 clean:
-	find . -type f -name "*.py[co]" -delete
-	find . -type d -name "__pycache__" -delete
+	$(PYTHON_INTERPRETER) -c "from pathlib import Path; import shutil; roots=(Path('image_classifier'), Path('tests')); [path.unlink() for root in roots for pattern in ('*.pyc', '*.pyo') for path in root.rglob(pattern)]; [shutil.rmtree(path) for root in roots for path in root.rglob('__pycache__') if path.is_dir()]"
 
 
 ## Lint using ruff (use `make format` to do formatting)
 .PHONY: lint
 lint:
-	ruff format --check
-	ruff check
+	uv run ruff format --check
+	uv run ruff check
 
 ## Format source code with ruff
 .PHONY: format
 format:
-	ruff check --fix
-	ruff format
+	uv run ruff check --fix
+	uv run ruff format
 
 
 
 ## Run tests
 .PHONY: test
 test:
-	python -m pytest tests
+	uv run python -m pytest tests
 
 
 ## Set up Python interpreter environment
@@ -62,10 +61,22 @@ create_environment:
 #################################################################################
 
 
-## Make dataset
+## Download and verify CIFAR-10
 .PHONY: data
-data: requirements
-	$(PYTHON_INTERPRETER) image_classifier/dataset.py
+data:
+	uv run python -m image_classifier.dataset
+
+
+## Train, evaluate, and save the CIFAR-10 classifier
+.PHONY: train
+train:
+	uv run python -m image_classifier.main train
+
+
+## Classify a sample from the CIFAR-10 test set
+.PHONY: predict
+predict:
+	uv run python -m image_classifier.main predict-sample
 
 
 #################################################################################

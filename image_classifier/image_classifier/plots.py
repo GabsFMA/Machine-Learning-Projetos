@@ -1,20 +1,38 @@
+from math import ceil
+
 import matplotlib.pyplot as plt
 
 
 def plot_sample_images(images, labels, class_names, num_images=9):
     """Plota exemplos de imagens de um conjunto de dados."""
 
-    plt.figure(figsize=(10, 10))
+    if num_images <= 0:
+        raise ValueError("num_images deve ser maior que zero.")
+    if num_images > len(images) or num_images > len(labels):
+        raise ValueError("num_images não pode exceder a quantidade de imagens ou rótulos.")
+
+    columns = min(3, num_images)
+    rows = ceil(num_images / columns)
+    figure, axes = plt.subplots(
+        rows,
+        columns,
+        figsize=(4 * columns, 4 * rows),
+        squeeze=False,
+    )
 
     for i in range(num_images):
-        plt.subplot(3, 3, i + 1)
-        plt.imshow(images[i])
-        plt.title(class_names[labels[i]])
-        plt.axis("off")
+        axis = axes.flat[i]
+        axis.imshow(images[i])
+        axis.set_title(class_names[int(labels[i])])
+        axis.axis("off")
 
-    plt.suptitle("Exemplos da base CIFAR-10")
-    plt.tight_layout()
+    for axis in list(axes.flat)[num_images:]:
+        figure.delaxes(axis)
+
+    figure.suptitle("Exemplos da base CIFAR-10")
+    figure.tight_layout()
     plt.show()
+
 
 def plot_training_history(history):
     """Plota a evolução da acurácia e da loss durante o treinamento."""

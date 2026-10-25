@@ -5,7 +5,7 @@ build-backend = "flit_core.buildapi"
 [project]
 name = "image_classifier"
 version = "0.0.1"
-description = "A short description of the project."
+description = "CNN image classifier for the CIFAR-10 dataset using TensorFlow."
 authors = [
   { name = "GFMA" },
 ]
@@ -47,4 +47,3 @@ extend-select = ["I"]  # Add import sorting
 [tool.ruff.lint.isort]
 known-first-party = ["image_classifier"]
 force-sort-within-sections = true
-
