@@ -102,4 +102,4 @@ Para executar os testes:
 uv run python -m pytest tests
 ```
 
-Atualmente, `tests/test_data.py` contém apenas um teste de exemplo com `assert False`; portanto, a suíte ainda não representa uma validação funcional do projeto e falha até que esse placeholder seja substituído.
+Os testes cobrem a criação do alvo, a agregação dos itens, o salvamento do dataset e o cálculo das métricas de avaliação dos modelos.
