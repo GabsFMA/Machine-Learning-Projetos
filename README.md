@@ -19,12 +19,15 @@ Cada subprojeto possuirá um `README.md` próprio com informações específicas
 
 ## Trabalhos
 
-| Trabalho | Tema | 
+| Projeto | Descrição |
 |---|---|
-| 01 - Olist | Estrutura inicial de projeto de Machine Learning |
-| Geração multimodal com BLIP | Geração de legendas para imagens com um modelo pré-treinado |
+| [Olist](./olist/) | Previsão de atraso na entrega de pedidos usando dados do e-commerce Olist. Inclui preparação dos dados, comparação de modelos, avaliação e explicações SHAP. |
+| [Deep Learning](./deep_learning/) | Atividades didáticas com TensorFlow/Keras: conceitos de redes neurais e treinamento de uma MLP para classificação binária em dados sintéticos. |
+| [Classificador de imagens](./image_classifier/) | Rede neural convolucional com TensorFlow/Keras para classificar imagens da base CIFAR-10 em dez categorias. |
+| [Reconhecimento facial](./face_recognition/) | Identificação de pessoas em uma galeria local de imagens usando DeepFace, com suporte a reconhecimento de imagens individuais ou de um conjunto de teste. |
+| [Geração de legendas com BLIP](./multimodal_generation_blip/) | Notebook que usa o modelo pré-treinado BLIP para gerar legendas de imagens e comparar geração livre e condicionada por prefixos. |
 
-Novos projetos serão adicionados conforme forem desenvolvidos durante o semestre.
+Cada projeto tem sua própria pasta e README com instruções de execução, dependências e detalhes específicos.
 
 ## Ambientes e dependências
 
