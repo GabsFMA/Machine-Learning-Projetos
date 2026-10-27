@@ -65,7 +65,14 @@ create_environment:
 ## Make dataset
 .PHONY: data
 data: requirements
-	$(PYTHON_INTERPRETER) module_olist/dataset.py
+	uv run python -m module_olist.dataset
+
+
+## Prepare features and train the selected model
+.PHONY: train
+train: data
+	uv run python -m module_olist.main
+	uv run python -m module_olist.modeling.train
 
 
 #################################################################################

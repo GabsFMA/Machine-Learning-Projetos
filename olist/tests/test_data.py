@@ -1,6 +1,13 @@
 import pandas as pd
+import pytest
 
-from module_olist.dataset import aggregate_items, create_target, save_dataset
+from module_olist.dataset import (
+    REQUIRED_RAW_FILES,
+    aggregate_items,
+    create_target,
+    download_data,
+    save_dataset,
+)
 
 
 def test_create_target_keeps_delivered_orders_with_complete_dates():
@@ -53,3 +60,25 @@ def test_save_dataset_creates_parent_directory_and_round_trips(tmp_path):
     save_dataset(dataset, output_path)
 
     pd.testing.assert_frame_equal(pd.read_csv(output_path), dataset)
+
+
+def test_download_data_skips_download_when_required_files_exist(tmp_path, monkeypatch):
+    for filename in REQUIRED_RAW_FILES:
+        (tmp_path / filename).touch()
+
+    def fail_if_called(*args, **kwargs):
+        raise AssertionError("dataset_download should not be called")
+
+    monkeypatch.setattr("module_olist.dataset.kagglehub.dataset_download", fail_if_called)
+
+    download_data(tmp_path)
+
+
+def test_download_data_reports_missing_files_from_download(tmp_path, monkeypatch):
+    monkeypatch.setattr(
+        "module_olist.dataset.kagglehub.dataset_download",
+        lambda handle, output_dir: str(tmp_path),
+    )
+
+    with pytest.raises(FileNotFoundError, match="olist_orders_dataset.csv"):
+        download_data(tmp_path)

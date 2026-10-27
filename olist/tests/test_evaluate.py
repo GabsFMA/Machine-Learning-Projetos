@@ -20,9 +20,14 @@ def test_evaluate_models_returns_metrics_for_each_model():
     features = np.zeros((4, 1))
     labels = np.array([0, 1, 1, 0])
 
-    results = evaluate_models({"fixed": FixedProbabilityModel()}, features, labels)
+    results = evaluate_models(
+        {"fixed": FixedProbabilityModel()},
+        features,
+        labels,
+        {"fixed": 0.5},
+    )
 
-    assert 0.2 < results["fixed"]["threshold"] < 0.7
+    assert results["fixed"]["threshold"] == pytest.approx(0.5)
     assert results["fixed"]["precision"] == pytest.approx(1.0)
     assert results["fixed"]["recall"] == pytest.approx(1.0)
     assert results["fixed"]["f1"] == pytest.approx(1.0)

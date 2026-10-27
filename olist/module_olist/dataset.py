@@ -1,7 +1,44 @@
 from pathlib import Path
 
-import pandas as pd
+import kagglehub
 from loguru import logger
+import pandas as pd
+
+from module_olist.config import RAW_DATA_DIR
+
+KAGGLE_DATASET = "olistbr/brazilian-ecommerce"
+REQUIRED_RAW_FILES = (
+    "olist_orders_dataset.csv",
+    "olist_order_items_dataset.csv",
+    "olist_customers_dataset.csv",
+)
+
+
+def download_data(output_dir: Path = RAW_DATA_DIR) -> None:
+    """Download the public Olist dataset if required source files are missing."""
+    output_dir.mkdir(parents=True, exist_ok=True)
+    missing_files = [
+        filename for filename in REQUIRED_RAW_FILES if not (output_dir / filename).is_file()
+    ]
+
+    if not missing_files:
+        logger.info(f"Dados brutos já disponíveis em: {output_dir}")
+        return
+
+    logger.info(f"Baixando o dataset Kaggle {KAGGLE_DATASET}...")
+    kagglehub.dataset_download(KAGGLE_DATASET, output_dir=str(output_dir))
+
+    missing_files = [
+        filename for filename in REQUIRED_RAW_FILES if not (output_dir / filename).is_file()
+    ]
+    if missing_files:
+        missing = ", ".join(missing_files)
+        raise FileNotFoundError(
+            f"O download do dataset não disponibilizou os arquivos necessários em "
+            f"{output_dir}: {missing}"
+        )
+
+    logger.success(f"Dados brutos disponíveis em: {output_dir}")
 
 
 def load_data(
@@ -65,15 +102,12 @@ def create_target(orders: pd.DataFrame) -> pd.DataFrame:
     delivered_orders = orders.loc[
         # Mantém somente pedidos efetivamente entregues.
         orders["order_status"].eq("delivered")
-
         # A data real de entrega é necessária para determinar
         # se o pedido atrasou.
         & orders["order_delivered_customer_date"].notna()
-
         # A data estimada é necessária para comparar
         # o prazo previsto com a entrega real.
         & orders["order_estimated_delivery_date"].notna()
-
         # A aprovação representa o momento no qual será
         # realizada a previsão.
         & orders["order_approved_at"].notna()
@@ -92,13 +126,10 @@ def create_target(orders: pd.DataFrame) -> pd.DataFrame:
     # ---------------------------------------------------------
     logger.info(f"Pedidos originais: {len(orders):,}")
 
-    logger.info(
-        f"Pedidos no recorte histórico: {len(delivered_orders):,}"
-    )
+    logger.info(f"Pedidos no recorte histórico: {len(delivered_orders):,}")
 
     logger.info(
-        "Distribuição da variável-alvo:\n"
-        f"{delivered_orders['is_late'].value_counts(dropna=False)}"
+        f"Distribuição da variável-alvo:\n{delivered_orders['is_late'].value_counts(dropna=False)}"
     )
 
     return delivered_orders
@@ -116,34 +147,24 @@ def aggregate_items(items: pd.DataFrame) -> pd.DataFrame:
         DataFrame agregado por `order_id`.
     """
 
-    items_agg = (
-        items.groupby(
-            "order_id",
-            as_index=False,
-        )
-        .agg(
-            # Quantidade de itens existentes no pedido.
-            item_count=("order_item_id", "count"),
-
-            # Quantidade de vendedores distintos envolvidos.
-            seller_count=("seller_id", "nunique"),
-
-            # Valor total dos produtos.
-            total_price=("price", "sum"),
-
-            # Valor total de frete.
-            total_freight=("freight_value", "sum"),
-        )
+    items_agg = items.groupby(
+        "order_id",
+        as_index=False,
+    ).agg(
+        # Quantidade de itens existentes no pedido.
+        item_count=("order_item_id", "count"),
+        # Quantidade de vendedores distintos envolvidos.
+        seller_count=("seller_id", "nunique"),
+        # Valor total dos produtos.
+        total_price=("price", "sum"),
+        # Valor total de frete.
+        total_freight=("freight_value", "sum"),
     )
 
     # Após a agregação, cada pedido deve aparecer apenas uma vez.
-    assert items_agg["order_id"].is_unique, (
-        "order_id não é único após a agregação dos itens."
-    )
+    assert items_agg["order_id"].is_unique, "order_id não é único após a agregação dos itens."
 
-    logger.info(
-        f"Pedidos após agregação dos itens: {len(items_agg):,}"
-    )
+    logger.info(f"Pedidos após agregação dos itens: {len(items_agg):,}")
 
     return items_agg
 
@@ -203,14 +224,9 @@ def create_dataset(
     )
 
     # Mantém a garantia de uma linha por pedido.
-    assert data["order_id"].is_unique, (
-        "order_id deixou de ser único após as junções."
-    )
+    assert data["order_id"].is_unique, "order_id deixou de ser único após as junções."
 
-    logger.info(
-        f"Dataset consolidado: {data.shape[0]:,} linhas "
-        f"x {data.shape[1]} colunas"
-    )
+    logger.info(f"Dataset consolidado: {data.shape[0]:,} linhas x {data.shape[1]} colunas")
 
     return data
 
@@ -238,6 +254,12 @@ def save_dataset(
         index=False,
     )
 
-    logger.success(
-        f"Dataset salvo em: {output_path}"
-    )
+    logger.success(f"Dataset salvo em: {output_path}")
+
+
+def main() -> None:
+    download_data()
+
+
+if __name__ == "__main__":
+    main()

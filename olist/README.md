@@ -52,13 +52,26 @@ O projeto requer Python **3.12.1** e usa `uv` para gerenciar o ambiente e as dep
 uv sync
 ```
 
-Para gerar a base refinada a partir dos CSVs originais:
+Baixe os dados públicos do Kaggle para `data/raw/` e gere a base refinada:
 
 ```powershell
+uv run python -m module_olist.dataset
 uv run python -m module_olist.main
 ```
 
-Para executar a demonstração de inferência, primeiro gere `data/interim/orders_dataset_refined.csv`:
+Para comparar os modelos por cross-validation, ajustar o vencedor no conjunto de treino, avaliar no conjunto de teste e salvar o pipeline com os metadados:
+
+```powershell
+uv run python -m module_olist.modeling.train
+```
+
+O fluxo completo também está disponível pelo Makefile:
+
+```powershell
+make train
+```
+
+Para executar a demonstração de inferência, primeiro gere o modelo e a base refinada:
 
 ```powershell
 uv run python -m module_olist.modeling.inference
@@ -102,4 +115,4 @@ Para executar os testes:
 uv run python -m pytest tests
 ```
 
-Os testes cobrem a criação do alvo, a agregação dos itens, o salvamento do dataset e o cálculo das métricas de avaliação dos modelos.
+Os testes cobrem a criação do alvo, o download dos dados, a agregação dos itens, o salvamento do dataset, a avaliação com threshold definido pela validação e a orquestração do treinamento.

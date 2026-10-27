@@ -1,25 +1,20 @@
-from sklearn.model_selection import (
-    StratifiedKFold,
-    cross_validate,
-    cross_val_predict,
-)
-
-from sklearn.metrics import (
-    accuracy_score,
-    precision_score,
-    recall_score,
-    f1_score,
-)
-
+from loguru import logger
 import numpy as np
 import pandas as pd
-
-from loguru import logger
+from sklearn.metrics import (
+    accuracy_score,
+    f1_score,
+    precision_score,
+    recall_score,
+)
+from sklearn.model_selection import (
+    StratifiedKFold,
+    cross_val_predict,
+    cross_validate,
+)
 
 from module_olist.modeling.pipeline import (
-    create_gradient_boosting_pipeline,
-    create_xgboost_pipeline,
-    create_lightgbm_pipeline,
+    create_model_pipelines,
 )
 
 
@@ -44,7 +39,6 @@ def summarize_cv(results):
     summary = []
 
     for metric in metrics:
-
         values = results[f"test_{metric}"]
 
         summary.append(
@@ -73,20 +67,37 @@ def find_best_threshold(y_true, y_proba):
     best_recall = None
 
     # Testa diferentes thresholds
-    for threshold in np.arange(0.01, 1.00, 0.01,):
-
+    for threshold in np.arange(
+        0.01,
+        1.00,
+        0.01,
+    ):
         # Converte probabilidades em classes
         y_pred = (y_proba >= threshold).astype(int)
 
         # Calcula as métricas
-        accuracy = accuracy_score(y_true, y_pred,)
-        precision = precision_score(y_true, y_pred, zero_division=0,)
-        recall = recall_score(y_true, y_pred, zero_division=0,)
-        f1 = f1_score(y_true, y_pred, zero_division=0,)
+        accuracy = accuracy_score(
+            y_true,
+            y_pred,
+        )
+        precision = precision_score(
+            y_true,
+            y_pred,
+            zero_division=0,
+        )
+        recall = recall_score(
+            y_true,
+            y_pred,
+            zero_division=0,
+        )
+        f1 = f1_score(
+            y_true,
+            y_pred,
+            zero_division=0,
+        )
 
         # Verifica se encontrou um F1 melhor
         if f1 > best_f1:
-
             best_threshold = threshold
             best_accuracy = accuracy
             best_precision = precision
@@ -125,11 +136,7 @@ def cross_validate_models(
     # Pipelines
     # -------------------------------------------------
 
-    pipelines = {
-        "Gradient Boosting": create_gradient_boosting_pipeline(),
-        "XGBoost": create_xgboost_pipeline(),
-        "LightGBM": create_lightgbm_pipeline(),
-    }
+    pipelines = create_model_pipelines()
 
     # -------------------------------------------------
     # Estratégia de Cross Validation
@@ -162,10 +169,7 @@ def cross_validate_models(
     # -------------------------------------------------
 
     for name, pipeline in pipelines.items():
-
-        logger.info(
-            f"Executando Cross Validation: {name}"
-        )
+        logger.info(f"Executando Cross Validation: {name}")
 
         # ---------------------------------------------
         # Métricas dos folds
@@ -181,15 +185,11 @@ def cross_validate_models(
         )
 
         # Resume média e desvio padrão
-        summary = summarize_cv(
-            results
-        )
+        summary = summarize_cv(results)
 
         print("\n")
         print("=" * 60)
-        print(
-            f"CROSS VALIDATION - {name}"
-        )
+        print(f"CROSS VALIDATION - {name}")
         print("=" * 60)
 
         print(summary)
@@ -212,11 +212,9 @@ def cross_validate_models(
         # Melhor threshold
         # ---------------------------------------------
 
-        threshold_results = (
-            find_best_threshold(
-                y_true=y_train,
-                y_proba=y_proba_oof,
-            )
+        threshold_results = find_best_threshold(
+            y_true=y_train,
+            y_proba=y_proba_oof,
         )
 
         # ---------------------------------------------
@@ -226,36 +224,12 @@ def cross_validate_models(
         cv_results[name] = {
             "results": results,
             "summary": summary,
-            "threshold": (
-                threshold_results[
-                    "threshold"
-                ]
-            ),
-            "accuracy": (
-                threshold_results[
-                    "accuracy"
-                ]
-            ),
-            "precision": (
-                threshold_results[
-                    "precision"
-                ]
-            ),
-            "recall": (
-                threshold_results[
-                    "recall"
-                ]
-            ),
-            "f1_oof": (
-                threshold_results[
-                    "f1"
-                ]
-            ),
-            "pr_auc": (
-                results[
-                    "test_pr_auc"
-                ].mean()
-            ),
+            "threshold": (threshold_results["threshold"]),
+            "accuracy": (threshold_results["accuracy"]),
+            "precision": (threshold_results["precision"]),
+            "recall": (threshold_results["recall"]),
+            "f1_oof": (threshold_results["f1"]),
+            "pr_auc": (results["test_pr_auc"].mean()),
         }
 
         # ---------------------------------------------
@@ -280,48 +254,29 @@ def cross_validate_models(
 
     best_model_name = max(
         cv_results,
-        key=lambda name: (
-            cv_results[name]["f1_oof"]
-        ),
+        key=lambda name: cv_results[name]["f1_oof"],
     )
 
     # Recupera os resultados do vencedor
-    best_results = cv_results[
-        best_model_name
-    ]
+    best_results = cv_results[best_model_name]
 
-    best_threshold = best_results[
-        "threshold"
-    ]
+    best_threshold = best_results["threshold"]
 
-    best_accuracy = best_results[
-        "accuracy"
-    ]
+    best_accuracy = best_results["accuracy"]
 
-    best_precision = best_results[
-        "precision"
-    ]
+    best_precision = best_results["precision"]
 
-    best_recall = best_results[
-        "recall"
-    ]
+    best_recall = best_results["recall"]
 
-    best_f1 = best_results[
-        "f1_oof"
-    ]
+    best_f1 = best_results["f1_oof"]
 
-    best_pr_auc = best_results[
-        "pr_auc"
-    ]
+    best_pr_auc = best_results["pr_auc"]
 
     # -------------------------------------------------
     # Resultado final da seleção
     # -------------------------------------------------
 
-    logger.success(
-        f"Melhor modelo: "
-        f"{best_model_name}"
-    )
+    logger.success(f"Melhor modelo: {best_model_name}")
 
     logger.info(f"F1 OOF otimizado: {best_f1:.3f}")
 
