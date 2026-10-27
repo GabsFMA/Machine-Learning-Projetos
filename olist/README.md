@@ -77,6 +77,15 @@ Para executar a demonstração de inferência, primeiro gere o modelo e a base r
 uv run python -m module_olist.modeling.inference
 ```
 
+Para gerar explicações SHAP do modelo salvo — gráfico de resumo e importância global — execute:
+
+```powershell
+uv run python -m module_olist.explain
+```
+
+Os gráficos são salvos em `reports/figures/`. A explicação usa até 500 pedidos selecionados
+reprodutivelmente da base refinada e aplica o pré-processador salvo no pipeline do modelo.
+
 ## Notebooks e relatórios
 
 - [`notebooks/02_EDA_template.ipynb`](notebooks/02_EDA_template.ipynb): análise do alvo, construção da base por pedido e exploração de prazos, complexidade do pedido, localização e sazonalidade.
@@ -115,4 +124,4 @@ Para executar os testes:
 uv run python -m pytest tests
 ```
 
-Os testes cobrem a criação do alvo, o download dos dados, a agregação dos itens, o salvamento do dataset, a avaliação com threshold definido pela validação e a orquestração do treinamento.
+Os testes cobrem a criação do alvo, o download dos dados, a agregação dos itens, o salvamento do dataset, a avaliação com threshold definido pela validação, a orquestração do treinamento e o fluxo de explicações SHAP.
