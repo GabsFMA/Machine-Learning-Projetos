@@ -22,8 +22,9 @@ Cada subprojeto possuirá um `README.md` próprio com informações específicas
 | Trabalho | Tema | 
 |---|---|
 | 01 - Olist | Estrutura inicial de projeto de Machine Learning |
+| Geração multimodal com BLIP | Geração de legendas para imagens com um modelo pré-treinado |
 
-A tabela será atualizada conforme novos trabalhos forem desenvolvidos durante o semestre.
+Novos projetos serão adicionados conforme forem desenvolvidos durante o semestre.
 
 ## Ambientes e dependências
 
