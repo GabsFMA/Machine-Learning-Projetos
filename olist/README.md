@@ -40,7 +40,7 @@ Por padrão, o resultado é salvo em `data/interim/orders_dataset_refined.csv`.
 
 ## Modelagem
 
-Os pipelines em `module_olist/modeling/` comparam Gradient Boosting, XGBoost e LightGBM. O pré-processamento mantém as features numéricas e aplica *one-hot encoding* às categóricas. A validação cruzada estratificada usa cinco folds e compara métricas como precisão, *recall*, F1, ROC-AUC e PR-AUC; o threshold de classificação é escolhido para maximizar o F1 das previsões *out-of-fold*.
+Os pipelines em `module_olist/modeling/` comparam Gradient Boosting, XGBoost e LightGBM. O pré-processamento mantém as features numéricas e aplica *one-hot encoding* às categóricas. A validação cruzada estratificada usa cinco folds e compara métricas como precisão, *recall*, F1, ROC-AUC e PR-AUC. O modelo é selecionado pela PR-AUC média dos folds; depois, o threshold é ajustado para maximizar o F1 das previsões *out-of-fold* somente do modelo selecionado. A avaliação final usa um conjunto de teste separado, que não participa da seleção do modelo nem do threshold.
 
 O artefato atualmente armazenado em `models/` é um pipeline LightGBM (`best_model.joblib`) com threshold `0.14`, registrado em `models/metadata.json`. O módulo `module_olist/modeling/inference.py` demonstra inferência em uma amostra de cinco pedidos.
 

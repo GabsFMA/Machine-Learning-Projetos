@@ -118,14 +118,14 @@ def cross_validate_models(
     y_train,
 ):
     """
-    Executa validação cruzada dos modelos.
+    Seleciona o modelo por PR-AUC médio da validação cruzada e ajusta seu threshold.
 
     Para cada modelo:
-     - Executa Cross Validation;
-     - Calcula métricas dos folds;
-     - Gera probabilidades Out-of-Fold;
-     - Encontra o melhor threshold pelo F1;
-     - Compara os modelos pelo F1 OOF otimizado.
+     - Executa validação cruzada estratificada e resume as métricas dos folds.
+
+    Depois da seleção pelo PR-AUC médio:
+     - Gera probabilidades Out-of-Fold somente para o modelo selecionado;
+     - Escolhe o threshold que maximiza o F1 nessas probabilidades.
 
     Retorna:
     - nome do melhor modelo;
@@ -161,7 +161,7 @@ def cross_validate_models(
         "pr_auc": "average_precision",
     }
 
-    # Guarda os resultados dos modelos
+    # Guarda os resultados de validação cruzada dos modelos
     cv_results = {}
 
     # -------------------------------------------------
@@ -194,115 +194,43 @@ def cross_validate_models(
 
         print(summary)
 
-        # ---------------------------------------------
-        # Probabilidades Out-of-Fold
-        # ---------------------------------------------
-
-        logger.info(f"Calculando probabilidades Out-of-Fold: {name}")
-
-        y_proba_oof = cross_val_predict(
-            estimator=pipeline,
-            X=X_train,
-            y=y_train,
-            cv=kf,
-            method="predict_proba",
-        )[:, 1]
-
-        # ---------------------------------------------
-        # Melhor threshold
-        # ---------------------------------------------
-
-        threshold_results = find_best_threshold(
-            y_true=y_train,
-            y_proba=y_proba_oof,
-        )
-
-        # ---------------------------------------------
-        # Guarda os resultados do modelo
-        # ---------------------------------------------
-
         cv_results[name] = {
             "results": results,
             "summary": summary,
-            "threshold": (threshold_results["threshold"]),
-            "accuracy": (threshold_results["accuracy"]),
-            "precision": (threshold_results["precision"]),
-            "recall": (threshold_results["recall"]),
-            "f1_oof": (threshold_results["f1"]),
-            "pr_auc": (results["test_pr_auc"].mean()),
+            "pr_auc": results["test_pr_auc"].mean(),
         }
 
-        # ---------------------------------------------
-        # Resultado com threshold otimizado
-        # ---------------------------------------------
-
-        logger.success(f"THRESHOLD OTIMIZADO - {name}")
-
-        logger.info(f"Threshold: {threshold_results['threshold']:.2f}")
-
-        logger.info(f"Accuracy: {threshold_results['accuracy']:.3f}")
-
-        logger.info(f"Precision: {threshold_results['precision']:.3f}")
-
-        logger.info(f"Recall: {threshold_results['recall']:.3f}")
-
-        logger.info(f"F1 OOF: {threshold_results['f1']:.3f}")
+        logger.info(f"PR-AUC médio CV ({name}): {cv_results[name]['pr_auc']:.3f}")
 
     # -------------------------------------------------
-    # Escolha do melhor modelo
+    # Seleção do modelo independente do ajuste de threshold
     # -------------------------------------------------
 
     best_model_name = max(
         cv_results,
-        key=lambda name: cv_results[name]["f1_oof"],
+        key=lambda name: cv_results[name]["pr_auc"],
+    )
+    logger.success(
+        f"Modelo selecionado por PR-AUC médio CV: {best_model_name} "
+        f"({cv_results[best_model_name]['pr_auc']:.3f})"
     )
 
-    # Recupera os resultados do vencedor
-    best_results = cv_results[best_model_name]
-
-    best_threshold = best_results["threshold"]
-
-    best_accuracy = best_results["accuracy"]
-
-    best_precision = best_results["precision"]
-
-    best_recall = best_results["recall"]
-
-    best_f1 = best_results["f1_oof"]
-
-    best_pr_auc = best_results["pr_auc"]
-
-    # -------------------------------------------------
-    # Resultado final da seleção
-    # -------------------------------------------------
-
-    logger.success(f"Melhor modelo: {best_model_name}")
-
-    logger.info(f"F1 OOF otimizado: {best_f1:.3f}")
-
-    logger.success("MODELO SELECIONADO")
-
-    logger.info(f"Modelo: {best_model_name}")
-
-    logger.info(f"Threshold: {best_threshold:.2f}")
-
-    logger.info(f"Accuracy OOF: {best_accuracy:.3f}")
-
-    logger.info(f"Precision OOF: {best_precision:.3f}")
-
-    logger.info(f"Recall OOF: {best_recall:.3f}")
-
-    logger.info(f"F1 OOF: {best_f1:.3f}")
-
-    logger.info(f"PR-AUC médio CV: {best_pr_auc:.3f}")
-
-    logger.success("Cross Validation concluído.")
-
-    # -------------------------------------------------
-    # Retorno
-    # -------------------------------------------------
-
-    return (
-        best_model_name,
-        best_threshold,
+    logger.info(f"Calculando probabilidades OOF para ajustar o threshold: {best_model_name}")
+    y_proba_oof = cross_val_predict(
+        estimator=pipelines[best_model_name],
+        X=X_train,
+        y=y_train,
+        cv=kf,
+        method="predict_proba",
+    )[:, 1]
+    threshold_results = find_best_threshold(
+        y_true=y_train,
+        y_proba=y_proba_oof,
     )
+    logger.info(
+        "Threshold de seleção: {:.2f}; F1 OOF para ajuste: {:.3f}",
+        threshold_results["threshold"],
+        threshold_results["f1"],
+    )
+
+    return best_model_name, threshold_results["threshold"]
