@@ -91,8 +91,13 @@ uv run python -m module_olist.modeling.active_learning
 ```
 
 O experimento usa um pool de até 5.000 pedidos, começa com 100 pedidos rotulados e revela 50
-pedidos por rodada. Os resultados são guardados em `reports/active_learning.csv` e
-`reports/figures/active_learning.png`.
+pedidos por rodada. Os resultados estão em [`reports/active_learning.csv`](reports/active_learning.csv) e
+[`reports/figures/active_learning.png`](reports/figures/active_learning.png).
+
+Na execução registrada, ambas as estratégias começam com PR-AUC de `0.096262`. Aos 1.100 pedidos
+rotulados, a incerteza alcança `0.117173`, enquanto a seleção aleatória alcança `0.103813`.
+O melhor PR-AUC da estratégia por incerteza é `0.118223` com 900 pedidos rotulados, contra
+`0.104789` da seleção aleatória com 800 pedidos.
 
 Os gráficos são salvos em `reports/figures/`. A explicação SHAP usa até 500 pedidos selecionados
 reprodutivelmente da base refinada e aplica o pré-processador salvo no pipeline do modelo.
