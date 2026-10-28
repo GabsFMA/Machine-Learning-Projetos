@@ -75,6 +75,12 @@ train: data
 	uv run python -m module_olist.modeling.train
 
 
+## Run the LabelSpreading active-learning simulation
+.PHONY: active-learning
+active-learning: data
+	uv run python -m module_olist.modeling.active_learning
+
+
 #################################################################################
 # Self Documenting Commands                                                     #
 #################################################################################

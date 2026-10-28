@@ -83,7 +83,18 @@ Para gerar explicações SHAP do modelo salvo — gráfico de resumo e importân
 uv run python -m module_olist.explain
 ```
 
-Os gráficos são salvos em `reports/figures/`. A explicação usa até 500 pedidos selecionados
+Para executar o experimento de active learning com `LabelSpreading`, compare seleção por
+incerteza e seleção aleatória e gere o histórico e o gráfico de PR-AUC:
+
+```powershell
+uv run python -m module_olist.modeling.active_learning
+```
+
+O experimento usa um pool de até 5.000 pedidos, começa com 100 pedidos rotulados e revela 50
+pedidos por rodada. Os resultados são guardados em `reports/active_learning.csv` e
+`reports/figures/active_learning.png`.
+
+Os gráficos são salvos em `reports/figures/`. A explicação SHAP usa até 500 pedidos selecionados
 reprodutivelmente da base refinada e aplica o pré-processador salvo no pipeline do modelo.
 
 ## Notebooks e relatórios
